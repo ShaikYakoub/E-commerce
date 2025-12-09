@@ -1,4 +1,3 @@
-import NextAuth from "next-auth";
 export { auth as middleware } from "@/auth";
 
 export const config = {
