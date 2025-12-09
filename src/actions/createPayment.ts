@@ -5,41 +5,38 @@ import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
 
-export async function createPayment(formData: FormData) {
+// 👇 CHANGE: We accept the 'orderId' string, not FormData
+export async function createPayment(internalOrderId: string) {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
-  // 1. Get Cart Total
-  const cart = await db.cart.findUnique({
-    where: { userId: session.user.id },
-    include: { items: { include: { product: true } } },
+  // 1. Fetch the Order from Database (Ensures price consistency)
+  const order = await db.order.findUnique({
+    where: { id: internalOrderId },
   });
 
-  if (!cart || cart.items.length === 0) redirect("/");
+  if (!order) {
+    throw new Error("Order not found");
+  }
 
-  const amount = cart.items.reduce(
-    (acc, item) => acc + Number(item.product.price) * item.quantity,
-    0
-  );
-
-  // 2. Initialize Razorpay with the Correct Environment Variable
-  // We use NEXT_PUBLIC_RAZORPAY_KEY_ID because that is what is in your .env
+  // 2. Initialize Razorpay
   const razorpay = new Razorpay({
-    key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!, 
+    key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
     key_secret: process.env.RAZORPAY_KEY_SECRET!,
   });
 
-  // 3. Create Order
-  const order = await razorpay.orders.create({
-    amount: Math.round(amount * 100), // Convert to paise (integers only)
+  // 3. Create Razorpay Order
+  // We use the total directly from the DB order
+  const razorpayOrder = await razorpay.orders.create({
+    amount: Math.round(Number(order.total) * 100), // Convert Decimal to paise
     currency: "INR",
-    receipt: `order_${Date.now()}`,
+    receipt: order.id, // Bind it to our internal Order ID
   });
 
   return {
-    orderId: order.id,
-    amount: order.amount,
-    currency: order.currency,
-    keyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID, // Send key to frontend
+    orderId: razorpayOrder.id, // This is the 'order_...' string from Razorpay
+    amount: razorpayOrder.amount,
+    currency: razorpayOrder.currency,
+    keyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
   };
 }

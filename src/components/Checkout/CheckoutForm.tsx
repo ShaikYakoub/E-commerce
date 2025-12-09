@@ -1,21 +1,38 @@
-// src/components/Checkout/CheckoutForm.tsx
-'use client'
+"use client";
 
-import { createOrder, verifyPayment } from "@/actions";
-import { createPayment } from "@/actions/createPayment";
-import { ICartItem } from "@/types";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
+import { createOrder } from "@/actions/createOrder";
+// We will create these two actions in the next step to prevent import errors:
+import { createPayment } from "@/actions/createPayment"; 
+import { verifyPayment } from "@/actions/verifyPayment"; 
 import { Loader2 } from "lucide-react";
 
-// Add Razorpay type definition for window
+// 1. FIX: Teach TypeScript about Razorpay on the window object
 declare global {
   interface Window {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     Razorpay: any;
   }
 }
 
-export function CheckoutForm({ cartItems, total, userEmail }: { cartItems: ICartItem[], total: number, userEmail: string }) {
+// 2. FIX: Define the interface explicitly to expect numbers
+interface CartItem {
+  id: string;
+  quantity: number;
+  product: {
+    id: string;
+    name: string;
+    price: number; // 👈 This must be 'number', not 'Decimal'
+    imageUrl: string;
+  };
+}
+
+interface CheckoutFormProps {
+  cartItems: CartItem[]; 
+  total: number;
+  userEmail: string;
+}
+
+export function CheckoutForm({ cartItems, total, userEmail }: CheckoutFormProps) {
   const [isPending, startTransition] = useTransition();
 
   const handleCheckout = async (formData: FormData) => {
@@ -25,12 +42,9 @@ export function CheckoutForm({ cartItems, total, userEmail }: { cartItems: ICart
         const { orderId } = await createOrder(formData);
 
         // 2. Create Razorpay Order
-        const { orderId: razorpayOrderId } = await createPayment({
-          orderId,
-          amount: total,
-        });
+        const { orderId: razorpayOrderId } = await createPayment(orderId);
 
-        // 3. Load Razorpay Script
+        // 3. Load Razorpay Script manually
         const script = document.createElement('script');
         script.src = 'https://checkout.razorpay.com/v1/checkout.js';
         script.async = true;
@@ -38,13 +52,12 @@ export function CheckoutForm({ cartItems, total, userEmail }: { cartItems: ICart
 
         script.onload = () => {
           const options = {
-            key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID, // Use public key here
+            key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID, 
             amount: Math.round(total * 100),
             currency: "INR",
             name: "Your Store Name",
-            description: "Payment for Order #" + orderId.slice(-6),
+            description: "Payment for Order",
             order_id: razorpayOrderId,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             handler: async function (response: any) {
               // 4. Verify Payment on Server
               await verifyPayment(
@@ -53,6 +66,7 @@ export function CheckoutForm({ cartItems, total, userEmail }: { cartItems: ICart
                 response.razorpay_signature,
                 orderId
               );
+              alert("Payment Successful!");
             },
             prefill: {
               email: userEmail,
