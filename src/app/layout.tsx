@@ -1,9 +1,8 @@
-export const dynamic = "force-dynamic"; // 👈 CRITICAL: Add this back
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import { Suspense } from "react"; // 👈 1. Import Suspense
 import "./globals.css";
 import { Navbar } from "@/components/Navbar";
+import { Providers } from "@/components/Providers"; // 👈 Import this
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -20,14 +19,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        {/* 2. Wrap Navbar in Suspense with a fallback */}
-        <Suspense fallback={<div className="h-16 border-b bg-white" />}>
+        {/* Wrap everything in Providers */}
+        <Providers>
           <Navbar />
-        </Suspense>
-        
-        <main className="min-h-screen">
-          {children}
-        </main>
+          <main className="min-h-screen">
+            {children}
+          </main>
+        </Providers>
       </body>
     </html>
   );

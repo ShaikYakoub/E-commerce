@@ -1,34 +1,24 @@
 // src/components/Navbar.tsx
+"use client"; // 👈 Critical: Runs in browser only
+
 import Link from "next/link";
-import { auth, signOut } from "@/auth";
-import { db } from "@/lib/db";
-import { ShoppingCart, LogOut } from "lucide-react";
+import { useSession, signOut } from "next-auth/react";
+import { ShoppingCart, LogOut, User, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
 
-export async function Navbar() {
-  let session = null;
-  let cartCount = 0;
+export function Navbar() {
+  const { data: session, status } = useSession();
+  const [cartCount, setCartCount] = useState(0);
 
-  // 🛡️ LEVEL 1: Wrap Auth Call
-  try {
-    session = await auth();
-  } catch (error) {
-    console.error("Navbar Auth Error (Build safe):", error);
-    // Continue rendering even if auth fails
-  }
-
-  // 🛡️ LEVEL 2: Wrap DB Call
-  if (session?.user?.id) {
-    try {
-      const cart = await db.cart.findUnique({
-        where: { userId: session.user.id },
-        include: { items: true }
-      });
-      cartCount = cart?.items.reduce((sum, item) => sum + item.quantity, 0) || 0;
-    } catch (error) {
-      console.error("Navbar DB Error (Build safe):", error);
-      cartCount = 0;
+  // Fetch cart count when user is logged in
+  useEffect(() => {
+    if (session?.user?.id) {
+      fetch("/api/cart/count")
+        .then((res) => res.json())
+        .then((data) => setCartCount(data.count))
+        .catch((err) => console.error("Failed to fetch cart", err));
     }
-  }
+  }, [session?.user?.id]);
 
   return (
     <nav className="bg-white border-b sticky top-0 z-50">
@@ -44,14 +34,20 @@ export async function Navbar() {
             Browse
           </Link>
 
-          {session?.user ? (
+          {status === "loading" ? (
+             <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+          ) : session?.user ? (
             <>
+              {/* Desktop Links */}
               <Link href="/seller/dashboard" className="text-sm font-medium hover:text-blue-600 hidden md:block">
                 Seller Dashboard
               </Link>
+
               <Link href="/orders" className="text-sm font-medium hover:text-blue-600 hidden md:block">
                 My Orders
               </Link>
+
+              {/* Cart */}
               <Link href="/cart" className="relative group">
                 <ShoppingCart className="w-6 h-6 text-gray-700 group-hover:text-blue-600" />
                 {cartCount > 0 && (
@@ -60,17 +56,17 @@ export async function Navbar() {
                   </span>
                 )}
               </Link>
-              <form action={async () => {
-                'use server';
-                await signOut();
-              }}>
-                <button type="submit" className="text-gray-500 hover:text-red-600">
-                  <LogOut className="w-5 h-5" />
-                </button>
-              </form>
+
+              {/* Sign Out Button */}
+              <button 
+                onClick={() => signOut()} 
+                className="text-gray-500 hover:text-red-600"
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
             </>
           ) : (
-            <Link href="/api/auth/signin" className="bg-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition">
+            <Link href="/login" className="bg-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition">
               Log In
             </Link>
           )}
