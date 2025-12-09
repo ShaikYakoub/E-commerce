@@ -1,4 +1,4 @@
-// src/app/products/page.tsx
+export const dynamic = "force-dynamic"; // 👈 ADD THIS
 import { db } from "@/lib/db";
 import { ProductCard } from "@/components/ProductCard";
 import Link from "next/link";

@@ -1,4 +1,4 @@
-// src/app/products/[id]/page.tsx
+export const dynamic = "force-dynamic"; // 👈 ADD THIS
 import { db } from "@/lib/db";
 import Image from "next/image";
 import { notFound } from "next/navigation";

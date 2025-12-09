@@ -1,4 +1,4 @@
-// src/app/login/page.tsx
+export const dynamic = "force-dynamic"; // 👈 ADD THIS
 import { signIn } from "@/auth";
 
 export default function LoginPage() {
