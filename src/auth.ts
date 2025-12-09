@@ -3,12 +3,11 @@ import Credentials from "next-auth/providers/credentials";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
-
-// 🛡️ FALLBACK SECRET: Prevents build crash if env var is missing
-const secret = process.env.AUTH_SECRET || "build_fallback_secret_123";
+import { authConfig } from "@/auth.config"; // Import the new config
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  secret, // Explicitly use the secret
+  ...authConfig, // Spread the base config
+  secret: process.env.AUTH_SECRET || "build_fallback_secret_123",
   providers: [
     Credentials({
       async authorize(credentials) {
@@ -24,17 +23,4 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
-  callbacks: {
-    async session({ session, token }) {
-      if (token.sub && session.user) {
-        session.user.id = token.sub;
-      }
-      return session;
-    }
-  },
-  session: { strategy: "jwt" },
-  pages: {
-    signIn: "/login",
-  },
-  trustHost: true, // 🛡️ Helps with Vercel deployment issues
 });
