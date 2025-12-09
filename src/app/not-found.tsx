@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic"; // 👈 ADD THIS LINE AT THE TOP
 import Link from 'next/link'
 
 export default function NotFound() {
