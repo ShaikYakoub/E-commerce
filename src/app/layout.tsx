@@ -1,4 +1,4 @@
-// src/app/layout.tsx
+export const dynamic = "force-dynamic"; // 👈 CRITICAL: Add this back
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Suspense } from "react"; // 👈 1. Import Suspense
