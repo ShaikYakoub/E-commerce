@@ -1,14 +1,122 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// prisma/schema.prisma
 
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  password      String
+  role          String    @default("USER") // USER, ADMIN
+  
+  // Seller Relations
+  products      Product[] @relation("SoldBy")
+  
+  // Buyer Relations
+  cart          Cart?
+  orders        Order[]   @relation("Orders")
+  reviews       Review[]
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  description String   @db.Text
+  category    String
+  price       Decimal  @db.Decimal(10, 2)
+  stock       Int      @default(0)
+  imageUrl    String
+  rating      Float    @default(0)
+  
+  seller      User     @relation("SoldBy", fields: [sellerId], references: [id], onDelete: Cascade)
+  sellerId    String
+
+  reviews     Review[]
+  orderItems  OrderItem[]
+  cartItems   CartItem[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([sellerId])
+  @@index([category])
+  // Fulltext search requires specific DB configuration, using simple index for compatibility
+  @@index([name]) 
+}
+
+model Cart {
+  id        String     @id @default(cuid())
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String     @unique
+  items     CartItem[]
+  
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  cartId    String
+  product   Product  @relation(fields: [productId], references: [id])
+  productId String
+  quantity  Int      @default(1)
+  
+  @@unique([cartId, productId])
+}
+
+model Order {
+  id           String      @id @default(cuid())
+  buyer        User        @relation("Orders", fields: [buyerId], references: [id], onDelete: Cascade)
+  buyerId      String
+  items        OrderItem[]
+  total        Decimal     @db.Decimal(10, 2)
+  status       String      @default("PENDING") // PENDING, PROCESSING, SHIPPED, DELIVERED, CANCELLED
+  
+  paymentId    String?     // Razorpay transaction ID
+  shippingAddr String      @db.Text
+  
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@index([buyerId])
+  @@index([status])
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId   String
+  product   Product  @relation(fields: [productId], references: [id])
+  productId String
+  
+  quantity  Int
+  price     Decimal  @db.Decimal(10, 2) // Price at time of order
+
+  @@unique([orderId, productId])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId String
+  reviewer  User     @relation(fields: [reviewerId], references: [id], onDelete: Cascade)
+  reviewerId String
+  
+  rating    Int      @db.SmallInt // 1-5
+  text      String   @db.Text
+  
+  createdAt DateTime @default(now())
+
+  @@unique([productId, reviewerId]) // One review per user per product
 }
