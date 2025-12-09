@@ -1,29 +1,34 @@
 import { PrismaClient } from "@prisma/client";
 
-const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
+const globalForPrisma = globalThis as unknown as { prisma: PrismaClient | undefined };
 
-// 🛡️ DEFENSIVE INIT: Check for Database URL before crashing
-const databaseUrl = process.env.DATABASE_URL;
+let prisma: PrismaClient | undefined;
 
-let prisma: PrismaClient;
+// 1. Lazy Getter: Only creates the client when requested
+function getClient() {
+  if (!prisma) {
+    // 🛡️ BUILD SAFETY: If DATABASE_URL is missing, use a placeholder.
+    // This prevents "Invalid Datasource URL" errors during the build step.
+    const url = process.env.DATABASE_URL || "postgresql://build_placeholder:password@localhost:5432/db";
+    
+    console.log(`🔌 Initializing Prisma Client (URL exists: ${!!process.env.DATABASE_URL})`);
 
-if (!databaseUrl) {
-  // During build, if env vars are missing, create a "dummy" or null client
-  // This prevents the "Invalid URL" crash during module loading
-  console.warn("⚠️ DATABASE_URL is missing. Using mock client for build.");
-  prisma = new Proxy({} as PrismaClient, {
-    get: () => async () => {
-      console.warn("DB call ignored during build/missing env.");
-      return null;
-    }
-  });
-} else {
-  // Real initialization
-  prisma = globalForPrisma.prisma || new PrismaClient();
+    prisma = globalForPrisma.prisma ?? new PrismaClient({
+      datasources: {
+        db: { url },
+      },
+    });
+
+    if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+  }
+  return prisma;
 }
 
-if (process.env.NODE_ENV !== "production" && databaseUrl) {
-  globalForPrisma.prisma = prisma;
-}
-
-export const db = prisma;
+// 2. Export a Proxy
+// This mimics the real 'db' object but delays initialization until you access a property (like db.user)
+export const db = new Proxy({} as PrismaClient, {
+  get: (_target, prop) => {
+    const client = getClient();
+    return client[prop as keyof PrismaClient];
+  },
+});
