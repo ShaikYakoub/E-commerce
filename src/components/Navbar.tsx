@@ -5,24 +5,24 @@ import { db } from "@/lib/db";
 import { ShoppingCart, LogOut } from "lucide-react";
 
 export async function Navbar() {
-    const session = await auth();
-    
-    let cartCount = 0;
-    
-    // 🛡️ DEFENSIVE CODE START: Wrap DB call in try/catch
-    if (session?.user?.id) {
-      try {
-        const cart = await db.cart.findUnique({
-          where: { userId: session.user.id },
-          include: { items: true }
-        });
-        cartCount = cart?.items.reduce((sum, item) => sum + item.quantity, 0) || 0;
-      } catch (error) {
-        console.error("Error fetching cart count (ignoring for build):", error);
-        cartCount = 0; // Default to 0 if DB fails
-      }
+  const session = await auth();
+  
+  let cartCount = 0;
+  
+  // 🛡️ DEFENSIVE CODE START: Wrap DB call in try/catch
+  if (session?.user?.id) {
+    try {
+      const cart = await db.cart.findUnique({
+        where: { userId: session.user.id },
+        include: { items: true }
+      });
+      cartCount = cart?.items.reduce((sum, item) => sum + item.quantity, 0) || 0;
+    } catch (error) {
+      console.error("Error fetching cart count (ignoring for build):", error);
+      cartCount = 0; // Default to 0 if DB fails
     }
-    // 🛡️ DEFENSIVE CODE END
+  }
+  // 🛡️ DEFENSIVE CODE END
 
   return (
     <nav className="bg-white border-b sticky top-0 z-50">
