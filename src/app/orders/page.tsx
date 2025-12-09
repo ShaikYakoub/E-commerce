@@ -1,4 +1,4 @@
-// src/app/orders/page.tsx
+export const dynamic = "force-dynamic"; // 👈 ADD THIS
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { redirect } from "next/navigation";

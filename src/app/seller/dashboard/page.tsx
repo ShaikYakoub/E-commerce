@@ -1,4 +1,4 @@
-// src/app/seller/dashboard/page.tsx
+export const dynamic = "force-dynamic"; // 👈 ADD THIS
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import Link from "next/link";
