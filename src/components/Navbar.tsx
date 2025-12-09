@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { auth, signOut } from "@/auth";
 import { db } from "@/lib/db";
-import { ShoppingCart, User, Package, LogOut } from "lucide-react";
+import { ShoppingCart, LogOut } from "lucide-react";
 
 export async function Navbar() {
   const session = await auth();

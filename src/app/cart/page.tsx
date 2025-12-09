@@ -33,8 +33,7 @@ export default async function CartPage() {
           <ShoppingBag className="w-12 h-12 text-gray-400" />
         </div>
         <h2 className="text-2xl font-bold mb-2">Your cart is empty</h2>
-        <p className="text-gray-500 mb-8">Looks like you haven't added anything yet.</p>
-        <Link href="/products" className="bg-black text-white px-8 py-3 rounded-lg hover:bg-gray-800 transition">
+        <p className="text-gray-500 mb-8">Looks like you haven&apos;t added anything yet.</p>        <Link href="/products" className="bg-black text-white px-8 py-3 rounded-lg hover:bg-gray-800 transition">
           Start Shopping
         </Link>
       </div>

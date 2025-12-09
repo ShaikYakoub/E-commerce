@@ -10,6 +10,7 @@ import { Loader2 } from "lucide-react";
 // Add Razorpay type definition for window
 declare global {
   interface Window {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     Razorpay: any;
   }
 }
@@ -43,6 +44,7 @@ export function CheckoutForm({ cartItems, total, userEmail }: { cartItems: ICart
             name: "Your Store Name",
             description: "Payment for Order #" + orderId.slice(-6),
             order_id: razorpayOrderId,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             handler: async function (response: any) {
               // 4. Verify Payment on Server
               await verifyPayment(
