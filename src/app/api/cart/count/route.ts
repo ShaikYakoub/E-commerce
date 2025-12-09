@@ -1,4 +1,3 @@
-// src/app/api/cart/count/route.ts
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
@@ -22,6 +21,7 @@ export async function GET() {
 
     return NextResponse.json({ count });
   } catch (error) {
+    console.error("Cart API Error:", error); // 👈 We now use the variable here
     return NextResponse.json({ count: 0 }, { status: 500 });
   }
 }

@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
-import { ShoppingCart, LogOut, User, Loader2 } from "lucide-react";
+import { ShoppingCart, LogOut, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export function Navbar() {
