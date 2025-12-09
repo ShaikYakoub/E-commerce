@@ -9,15 +9,17 @@ export default async function SellerDashboard() {
   const session = await auth();
   if (!session?.user?.id) return redirect("/api/auth/signin");
 
+  const userId = session.user.id; // 👈 Capture ID here
+
   // 1. Fetch Seller Data
   const products = await db.product.findMany({
-    where: { sellerId: session.user.id },
+    where: { sellerId: userId }, // ✅ Update here
     orderBy: { createdAt: 'desc' }
   });
 
   const orders = await db.order.findMany({
     where: {
-      items: { some: { product: { sellerId: session.user.id } } }
+      items: { some: { product: { sellerId: userId } } }
     },
     include: { items: { include: { product: true } } },
     orderBy: { createdAt: 'desc' }
@@ -29,7 +31,7 @@ export default async function SellerDashboard() {
     .reduce((sum, order) => {
        // Only count the items that belong to THIS seller
        const sellerItemsTotal = order.items
-         .filter(item => item.product.sellerId === session.user.id)
+         .filter(item => item.product.sellerId === userId)
          .reduce((itemSum, item) => itemSum + Number(item.price) * item.quantity, 0);
        return sum + sellerItemsTotal;
     }, 0);
