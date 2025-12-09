@@ -14,12 +14,11 @@ model User {
   name          String?
   email         String    @unique
   password      String
-  role          String    @default("USER") // USER, ADMIN
+  role          String    @default("USER")
+  image         String?   // 👈 ADD THIS LINE
   
-  // Seller Relations
+  // ... keep the rest of your relations below exactly as they are ...
   products      Product[] @relation("SoldBy")
-  
-  // Buyer Relations
   cart          Cart?
   orders        Order[]   @relation("Orders")
   reviews       Review[]
@@ -71,6 +70,9 @@ model CartItem {
   product   Product  @relation(fields: [productId], references: [id])
   productId String
   quantity  Int      @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   
   @@unique([cartId, productId])
 }

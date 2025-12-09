@@ -1,37 +1,28 @@
-// src/actions/updateProduct.ts
-'use server'
+"use server";
 
-import { auth } from "@/auth";
 import { db } from "@/lib/db";
-import { productSchema } from "@/lib/validations";
-import { revalidatePath } from "next/cache";
+import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 
-export async function updateProduct(productId: string, formData: FormData) {
+export async function updateProduct(id: string, formData: FormData) {
   const session = await auth();
-  if (!session?.user?.id) throw new Error("Unauthorized");
+  if (!session?.user?.id) redirect("/login");
 
-  const product = await db.product.findUnique({ where: { id: productId } });
-  
-  if (!product || product.sellerId !== session.user.id) {
-    throw new Error("Unauthorized operation");
-  }
-
-  const data = productSchema.parse({
-    name: formData.get("name"),
-    description: formData.get("description"),
-    category: formData.get("category"),
-    price: formData.get("price"),
-    stock: formData.get("stock"),
-    imageUrl: formData.get("imageUrl"),
-  });
+  const name = formData.get("name") as string;
+  const description = formData.get("description") as string;
+  const price = parseFloat(formData.get("price") as string);
+  const stock = parseInt(formData.get("stock") as string);
+  const category = formData.get("category") as string;
+  const imageUrl = formData.get("imageUrl") as string;
 
   await db.product.update({
-    where: { id: productId },
-    data,
+    where: { id },
+    data: { name, description, price, stock, category, imageUrl },
   });
 
-  revalidatePath("/seller/products");
-  revalidatePath(`/products/${productId}`);
-  redirect("/seller/products");
+  // ⚡ KEY FIX: Refresh cache and Redirect from the server
+  revalidatePath("/seller/dashboard");
+  revalidatePath(`/products/${id}`);
+  redirect("/seller/dashboard");
 }

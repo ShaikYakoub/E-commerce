@@ -1,49 +1,55 @@
-export const dynamic = "force-dynamic"; // 👈 ADD THIS
-import Link from "next/link";
+import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { ProductCard } from "@/components/ProductCard";
+import Link from "next/link";
+import { Plus } from "lucide-react";
 
 export default async function Home() {
-  const latestProducts = await db.product.findMany({
-    take: 4,
+  const session = await auth();
+  
+  // 1. Fetch User Role (if logged in)
+  let userRole = "USER";
+  if (session?.user?.id) {
+    const user = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: { role: true },
+    });
+    if (user) userRole = user.role;
+  }
+
+  // 2. Fetch Products
+  const products = await db.product.findMany({
     orderBy: { createdAt: "desc" },
-    where: { stock: { gt: 0 } }
+    include: { seller: { select: { name: true } } }, // Fetch seller name
   });
 
   return (
-    <div className="space-y-12 pb-10">
-      {/* Hero Section */}
-      <section className="bg-black text-white py-20">
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="text-5xl font-bold mb-6">Next Gen Commerce</h1>
-          <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-            Experience the future of online shopping with our blazing fast, secure, and seamless platform.
-          </p>
-          <div className="flex justify-center gap-4">
-            <Link href="/products" className="bg-white text-black px-8 py-3 rounded-full font-bold hover:bg-gray-100 transition">
-              Shop Now
-            </Link>
-            <Link href="/seller/dashboard" className="border border-white text-white px-8 py-3 rounded-full font-bold hover:bg-white hover:text-black transition">
-              Sell Products
-            </Link>
-          </div>
-        </div>
-      </section>
+    <main className="container mx-auto px-4 py-8">
+      {/* Hero / Header Section */}
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold">Latest Products</h1>
 
-      {/* Featured Products */}
-      <section className="container mx-auto px-4">
-        <h2 className="text-3xl font-bold mb-8">New Arrivals</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-          {latestProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
-        <div className="text-center mt-12">
-          <Link href="/products" className="text-blue-600 font-bold hover:underline">
-            View All Products &rarr;
+        {/* 👇 FIX: Only show this button if user is SELLER or ADMIN */}
+        {(userRole === "SELLER" || userRole === "ADMIN") && (
+          <Link
+            href="/seller/dashboard"
+            className="bg-black text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 hover:bg-gray-800 transition"
+          >
+            <Plus className="w-4 h-4" /> Sell Product
           </Link>
-        </div>
-      </section>
-    </div>
+        )}
+      </div>
+
+      {/* Product Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {products.map((product) => (
+          <ProductCard key={product.id} product={product} />
+        ))}
+      </div>
+      
+      {products.length === 0 && (
+        <p className="text-center text-gray-500 py-12">No products found.</p>
+      )}
+    </main>
   );
 }

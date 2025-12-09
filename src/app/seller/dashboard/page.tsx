@@ -1,20 +1,34 @@
-export const dynamic = "force-dynamic"; // 👈 ADD THIS
+export const dynamic = "force-dynamic";
+
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Plus, Package, ShoppingCart, IndianRupee } from "lucide-react";
+import Image from "next/image"; // 👈 Fixed Import
+import { Plus, Package, ShoppingCart, IndianRupee, Pencil, Trash2 } from "lucide-react";
+import { deleteProduct } from "@/actions/deleteProduct";
 
 export default async function SellerDashboard() {
   const session = await auth();
-  if (!session?.user?.id) return redirect("/api/auth/signin");
+  if (!session?.user?.id) return redirect("/login");
 
-  const userId = session.user.id; // 👈 Capture ID here
+  const user = await db.user.findUnique({
+    where: { id: session.user.id },
+  });
+
+  if (!user || (user.role !== "SELLER" && user.role !== "ADMIN")) {
+    return redirect("/"); 
+  }
+
+  const userId = session.user.id;
 
   // 1. Fetch Seller Data
   const products = await db.product.findMany({
-    where: { sellerId: userId }, // ✅ Update here
-    orderBy: { createdAt: 'desc' }
+    where: { sellerId: userId },
+    orderBy: { createdAt: 'desc' },
+    include: {
+        _count: { select: { orderItems: true } } // Fetch sold count
+    }
   });
 
   const orders = await db.order.findMany({
@@ -25,11 +39,10 @@ export default async function SellerDashboard() {
     orderBy: { createdAt: 'desc' }
   });
 
-  // 2. Calculate Stats
+  // 2. Calculate Revenue
   const totalRevenue = orders
-    .filter(o => o.status === "PROCESSING" || o.status === "DELIVERED") // Only count paid orders
+    .filter(o => o.status === "PROCESSING" || o.status === "DELIVERED") 
     .reduce((sum, order) => {
-       // Only count the items that belong to THIS seller
        const sellerItemsTotal = order.items
          .filter(item => item.product.sellerId === userId)
          .reduce((itemSum, item) => itemSum + Number(item.price) * item.quantity, 0);
@@ -40,7 +53,7 @@ export default async function SellerDashboard() {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Seller Dashboard</h1>
-        <Link href="/seller/products/new" className="bg-black text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-gray-800">
+        <Link href="/products/new" className="bg-black text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-gray-800">
           <Plus className="w-4 h-4" /> Add Product
         </Link>
       </div>
@@ -84,7 +97,7 @@ export default async function SellerDashboard() {
         </div>
       </div>
 
-      {/* Recent Products Table */}
+      {/* Products Table */}
       <h2 className="text-xl font-bold mb-4">Your Products</h2>
       <div className="bg-white border rounded-lg overflow-hidden mb-12">
         <table className="w-full text-left">
@@ -94,23 +107,52 @@ export default async function SellerDashboard() {
               <th className="p-4 font-medium text-gray-500">Price</th>
               <th className="p-4 font-medium text-gray-500">Stock</th>
               <th className="p-4 font-medium text-gray-500">Sold</th>
+              <th className="p-4 font-medium text-gray-500 text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {products.slice(0, 5).map((p) => (
-              <tr key={p.id} className="border-b last:border-0 hover:bg-gray-50">
-                <td className="p-4 font-medium">{p.name}</td>
+            {products.map((p) => (
+              <tr key={p.id} className="border-b last:border-0 hover:bg-gray-50 group">
+                <td className="p-4 font-medium flex items-center gap-3">
+                  <div className="w-10 h-10 relative bg-gray-100 rounded overflow-hidden border">
+                     <Image src={p.imageUrl} alt={p.name} fill className="object-cover"/>
+                  </div>
+                  {p.name}
+                </td>
                 <td className="p-4">₹{Number(p.price).toFixed(2)}</td>
                 <td className="p-4">
                   <span className={`px-2 py-1 rounded text-xs ${p.stock < 5 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
                     {p.stock}
                   </span>
                 </td>
-                <td className="p-4 text-gray-500">-</td> 
+                <td className="p-4 text-gray-600">{p._count.orderItems}</td> 
+                
+                {/* Actions: Edit & Delete */}
+                <td className="p-4 flex gap-2 justify-end">
+                  {/* EDIT BUTTON */}
+                  <Link href={`/seller/products/${p.id}/edit`} className="p-2 text-blue-600 hover:bg-blue-50 rounded transition">
+                    <Pencil className="w-4 h-4" />
+                  </Link>
+
+                  {/* DELETE BUTTON */}
+                  <form action={async () => {
+                    "use server";
+                    await deleteProduct(p.id);
+                  }}>
+                    <button className="p-2 text-red-600 hover:bg-red-50 rounded transition">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </form>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
+        {products.length === 0 && (
+            <div className="p-8 text-center text-gray-500">
+                You haven't added any products yet.
+            </div>
+        )}
       </div>
     </div>
   );

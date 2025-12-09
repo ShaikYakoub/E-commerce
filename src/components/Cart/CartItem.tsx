@@ -1,18 +1,42 @@
-// src/components/Cart/CartItem.tsx
-'use client'
+"use client";
 
-import { removeFromCart, updateCartQuantity } from "@/actions";
-import { ICartItem } from "@/types";
 import Image from "next/image";
+import { Trash2, Minus, Plus, Loader2 } from "lucide-react";
+import { updateCartItemQuantity, removeCartItem } from "@/actions/cart";
 import { useTransition } from "react";
-import { Loader2, Trash2 } from "lucide-react";
 
-export function CartItem({ item }: { item: ICartItem }) {
+interface CartItemProps {
+  item: {
+    id: string;
+    quantity: number;
+    product: {
+      name: string;
+      price: number; // Expect number, not Decimal
+      imageUrl: string;
+      category: string;
+    };
+  };
+}
+
+export function CartItem({ item }: CartItemProps) {
   const [isPending, startTransition] = useTransition();
 
+  const handleUpdate = (newQty: number) => {
+    startTransition(async () => {
+      await updateCartItemQuantity(item.id, newQty);
+    });
+  };
+
+  const handleRemove = () => {
+    startTransition(async () => {
+      await removeCartItem(item.id);
+    });
+  };
+
   return (
-    <div className="flex gap-4 p-4 border rounded-lg mb-4 bg-white shadow-sm">
-      <div className="relative w-24 h-24 bg-gray-100 rounded-md overflow-hidden flex-shrink-0">
+    <div className="flex gap-4 p-4 bg-white border rounded-lg shadow-sm">
+      {/* Image */}
+      <div className="relative w-24 h-24 flex-shrink-0 bg-gray-100 rounded-md overflow-hidden">
         <Image
           src={item.product.imageUrl}
           alt={item.product.name}
@@ -21,38 +45,42 @@ export function CartItem({ item }: { item: ICartItem }) {
         />
       </div>
 
+      {/* Details */}
       <div className="flex-1 flex flex-col justify-between">
-        <div className="flex justify-between items-start">
-          <div>
-            <h3 className="font-semibold text-lg">{item.product.name}</h3>
-            <p className="text-gray-500 text-sm">{item.product.category}</p>
-          </div>
-          <p className="font-bold text-lg">₹{Number(item.product.price).toFixed(2)}</p>
+        <div>
+          <h3 className="font-semibold text-lg line-clamp-1">{item.product.name}</h3>
+          <p className="text-gray-500 text-sm capitalize">{item.product.category}</p>
         </div>
+        <div className="font-bold text-blue-600">
+          ₹{item.product.price.toFixed(2)}
+        </div>
+      </div>
 
-        <div className="flex justify-between items-center mt-4">
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-600">Qty:</label>
-            <select
-              value={item.quantity}
-              onChange={(e) => startTransition(() => updateCartQuantity(item.id, Number(e.target.value)))}
-              disabled={isPending}
-              className="border rounded p-1 text-sm w-16"
-            >
-              {[...Array(Math.min(10, item.product.stock))].map((_, i) => (
-                <option key={i + 1} value={i + 1}>{i + 1}</option>
-              ))}
-            </select>
-            {isPending && <Loader2 className="w-4 h-4 animate-spin text-gray-400" />}
-          </div>
+      {/* Controls */}
+      <div className="flex flex-col items-end justify-between">
+        <button
+          onClick={handleRemove}
+          disabled={isPending}
+          className="text-red-500 hover:text-red-700 p-1"
+        >
+          {isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
+        </button>
 
+        <div className="flex items-center gap-3 border rounded-lg px-2 py-1">
           <button
-            onClick={() => startTransition(() => removeFromCart(item.id))}
-            disabled={isPending}
-            className="text-red-500 hover:text-red-700 flex items-center gap-1 text-sm font-medium transition-colors"
+            onClick={() => handleUpdate(item.quantity - 1)}
+            disabled={isPending || item.quantity <= 1}
+            className="p-1 hover:bg-gray-100 rounded disabled:opacity-50"
           >
-            <Trash2 className="w-4 h-4" />
-            Remove
+            <Minus className="w-4 h-4" />
+          </button>
+          <span className="w-4 text-center text-sm font-medium">{item.quantity}</span>
+          <button
+            onClick={() => handleUpdate(item.quantity + 1)}
+            disabled={isPending}
+            className="p-1 hover:bg-gray-100 rounded disabled:opacity-50"
+          >
+            <Plus className="w-4 h-4" />
           </button>
         </div>
       </div>

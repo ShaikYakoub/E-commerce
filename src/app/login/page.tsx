@@ -1,50 +1,91 @@
-export const dynamic = "force-dynamic"; // 👈 ADD THIS
 import { signIn } from "@/auth";
+import { redirect } from "next/navigation";
+import Link from "next/link";
 
-export default function LoginPage() {
+export default async function LoginPage(props: {
+  searchParams: Promise<{ error?: string; success?: string }>; // 👈 1. Change Type to Promise
+}) {
+  const searchParams = await props.searchParams; // 👈 2. Await it
+
   return (
-    <div className="flex min-h-[80vh] items-center justify-center">
-      <div className="w-full max-w-md bg-white p-8 rounded-lg shadow-md border">
-        <h1 className="text-2xl font-bold mb-6 text-center">Welcome Back</h1>
-        
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+       {/* ... rest of your JSX is fine, just use `searchParams.error` normally now ... */}
+       {/* (Copy the rest of your JSX from the previous step, it works fine) */}
+       {/* Just make sure you are using the 'searchParams' variable we created above */}
+       <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-xl shadow-lg">
+         {/* ... */}
+         {searchParams.error && (
+            <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg text-sm">
+              Login failed. Check your password.
+            </div>
+         )}
+
         <form
           action={async (formData) => {
             "use server";
-            await signIn("credentials", formData);
+            try {
+              // 1. Convert formData to a plain object
+              const data = Object.fromEntries(formData);
+              
+              // 2. Add the redirectTo option explicitly
+              await signIn("credentials", {
+                email: data.email,
+                password: data.password,
+                redirectTo: "/", // 👈 THIS FIXES THE ISSUE
+              });
+              
+            } catch (error) {
+              // Required for NextAuth redirects to work
+              if ((error as Error).message.includes("NEXT_REDIRECT")) {
+                throw error;
+              }
+              console.error("Login Error:", error);
+              redirect("/login?error=InvalidCredentials");
+            }
           }}
-          className="space-y-4"
+          className="mt-8 space-y-6"
         >
-          <div>
-            <label className="block text-sm font-medium mb-1">Email</label>
-            <input
-              name="email"
-              type="email"
-              placeholder="user@example.com"
-              className="w-full border p-2 rounded"
-              required
-            />
+          {/* ... Inputs remain exactly the same ... */}
+          
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email address</label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                required
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Password</label>
-            <input
-              name="password"
-              type="password"
-              className="w-full border p-2 rounded"
-              required
-            />
-          </div>
+
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded font-bold hover:bg-blue-700"
+            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-black hover:bg-gray-800 transition-colors"
           >
-            Sign In
+            Sign in
           </button>
+          
+          {/* Link to Register */}
+          <div className="text-center text-sm">
+            <span className="text-gray-500">Don&apos;t have an account? </span>
+            <Link href="/register" className="font-medium text-blue-600 hover:text-blue-500">
+              Sign up
+            </Link>
+          </div>
         </form>
-        
-        <div className="mt-6 text-center text-sm text-gray-500">
-          <p>Test Account (Buyer): buyer@test.com / password123</p>
-          <p>Test Account (Seller): seller@test.com / password123</p>
-        </div>
       </div>
     </div>
   );
