@@ -1,9 +1,11 @@
 // src/app/layout.tsx
-export const dynamic = "force-dynamic"; // 👈 Add this line
+export const dynamic = "force-dynamic"; 
+
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { Suspense } from "react"; // 👈 1. Import Suspense
 import "./globals.css";
-import { Navbar } from "@/components/Navbar"; // Import it
+import { Navbar } from "@/components/Navbar";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -20,7 +22,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <Navbar /> {/* Add this line */}
+        {/* 2. Wrap Navbar in Suspense with a fallback */}
+        <Suspense fallback={<div className="h-16 border-b bg-white" />}>
+          <Navbar />
+        </Suspense>
+        
         <main className="min-h-screen">
           {children}
         </main>
