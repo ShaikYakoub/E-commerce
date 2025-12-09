@@ -5,11 +5,18 @@ import { db } from "@/lib/db";
 import { ShoppingCart, LogOut } from "lucide-react";
 
 export async function Navbar() {
-  const session = await auth();
-  
+  let session = null;
   let cartCount = 0;
-  
-  // 🛡️ DEFENSIVE CODE START: Wrap DB call in try/catch
+
+  // 🛡️ LEVEL 1: Wrap Auth Call
+  try {
+    session = await auth();
+  } catch (error) {
+    console.error("Navbar Auth Error (Build safe):", error);
+    // Continue rendering even if auth fails
+  }
+
+  // 🛡️ LEVEL 2: Wrap DB Call
   if (session?.user?.id) {
     try {
       const cart = await db.cart.findUnique({
@@ -18,11 +25,10 @@ export async function Navbar() {
       });
       cartCount = cart?.items.reduce((sum, item) => sum + item.quantity, 0) || 0;
     } catch (error) {
-      console.error("Error fetching cart count (ignoring for build):", error);
-      cartCount = 0; // Default to 0 if DB fails
+      console.error("Navbar DB Error (Build safe):", error);
+      cartCount = 0;
     }
   }
-  // 🛡️ DEFENSIVE CODE END
 
   return (
     <nav className="bg-white border-b sticky top-0 z-50">
@@ -40,17 +46,12 @@ export async function Navbar() {
 
           {session?.user ? (
             <>
-              {/* Seller Link */}
               <Link href="/seller/dashboard" className="text-sm font-medium hover:text-blue-600 hidden md:block">
                 Seller Dashboard
               </Link>
-
-              {/* Orders */}
               <Link href="/orders" className="text-sm font-medium hover:text-blue-600 hidden md:block">
                 My Orders
               </Link>
-
-              {/* Cart */}
               <Link href="/cart" className="relative group">
                 <ShoppingCart className="w-6 h-6 text-gray-700 group-hover:text-blue-600" />
                 {cartCount > 0 && (
@@ -59,8 +60,6 @@ export async function Navbar() {
                   </span>
                 )}
               </Link>
-
-              {/* Sign Out */}
               <form action={async () => {
                 'use server';
                 await signOut();
