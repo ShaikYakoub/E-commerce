@@ -15,7 +15,8 @@ export async function verifyPayment(
 ) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
-
+ 
+  const userId = session.user.id; // 👈 Capture ID here
   // 1. Verify Signature
   const expectedSignature = createHmac('sha256', process.env.RAZORPAY_KEY_SECRET!)
     .update(`${razorpayOrderId}|${razorpayPaymentId}`)
@@ -55,8 +56,9 @@ export async function verifyPayment(
     }
 
     // Clear Cart
+    // Clear Cart
     await tx.cartItem.deleteMany({
-      where: { cart: { userId: session.user.id } },
+      where: { cart: { userId: userId } }, // ✅ Use the variable
     });
   });
 
