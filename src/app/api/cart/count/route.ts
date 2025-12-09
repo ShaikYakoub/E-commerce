@@ -5,11 +5,12 @@ import { NextResponse, type NextRequest } from "next/server";
 // 1. Force Dynamic Mode
 export const dynamic = "force-dynamic";
 
-// 2. Add 'req' parameter. Even if unused, its presence tells Next.js 
-// "This route depends on the request, so don't build it statically."
 export async function GET(req: NextRequest) {
+  // 🛡️ TRICK: "Use" the variable to satisfy the linter
+  // This tells TypeScript "I know this is here, ignore it."
+  void req; 
+  
   try {
-    // 3. Wrap Auth & DB in try/catch to prevent build crashes
     const session = await auth();
 
     if (!session?.user?.id) {
@@ -26,7 +27,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ count });
   } catch (error) {
     console.error("Cart API Error (ignoring for build):", error);
-    // Return 0 instead of crashing the build
     return NextResponse.json({ count: 0 });
   }
 }
